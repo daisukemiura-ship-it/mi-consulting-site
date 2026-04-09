@@ -1,0 +1,823 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+const C = {
+  blue: "#1B4572",
+  blueDark: "#0F2D4F",
+  blueDeep: "#0A1E38",
+  blueLight: "#2A5A8C",
+  bluePale: "#E8F0F8",
+  orange: "#D4762C",
+  orangeLight: "#E8923E",
+  orangePale: "#FDF0E4",
+  ivory: "#FAFAF6",
+  cream: "#F4F1EA",
+  warmGray: "#E9E5DC",
+  text: "#1A1A1A",
+  textSoft: "#3D3D37",
+  textMuted: "#7A756C",
+  border: "#DDD8CE",
+  white: "#FFFFFF",
+};
+
+function useReveal(threshold = 0.12) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } }, { threshold });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return { ref, vis };
+}
+
+function Reveal({ children, delay = 0, style = {} }) {
+  const { ref, vis } = useReveal();
+  return (
+    <div ref={ref} style={{
+      ...style, opacity: vis ? 1 : 0,
+      transform: vis ? "translateY(0)" : "translateY(24px)",
+      transition: `opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`,
+    }}>{children}</div>
+  );
+}
+
+function AccentLine({ width = 40, color = C.orange, style = {} }) {
+  return <div style={{ width, height: 3, background: color, borderRadius: 2, ...style }} />;
+}
+
+function SectionTag({ text, style = {} }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 12, marginBottom: 20, ...style }}>
+      <AccentLine width={28} />
+      <span style={{
+        fontSize: 10.5, color: C.orange, letterSpacing: "0.3em",
+        fontFamily: "'Outfit', sans-serif", fontWeight: 600, textTransform: "uppercase",
+      }}>{text}</span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════
+function Header({ page, setPage }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+  const nav = useCallback((k) => { setPage(k); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, [setPage]);
+
+  const navItems = [["home","ホーム"],["reason","保険資格返上の理由"],["company","会社概要"],["contact","お問い合わせ"]];
+
+  return (
+    <header style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+      background: scrolled ? "rgba(255,255,255,0.96)" : "rgba(250,250,246,0.9)",
+      backdropFilter: "blur(20px) saturate(1.2)",
+      borderBottom: `1px solid ${scrolled ? "rgba(27,69,114,0.08)" : "transparent"}`,
+      transition: "all 0.4s ease",
+    }}>
+      <div style={{
+        maxWidth: 1200, margin: "0 auto", padding: "0 36px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: scrolled ? 64 : 76, transition: "height 0.4s ease",
+      }}>
+        <div onClick={() => nav("home")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 8,
+            background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueLight} 100%)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700,
+            color: C.white, letterSpacing: "0.05em", flexShrink: 0,
+          }}>M&I</div>
+          <div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15.5, color: C.blue, letterSpacing: "0.08em", fontWeight: 600, lineHeight: 1.2 }}>M&I CONSULTING FIRM</div>
+            <div style={{ fontSize: 8.5, color: C.textMuted, letterSpacing: "0.16em", fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 400, marginTop: 2 }}>MIURA + INNOVATION</div>
+          </div>
+        </div>
+
+        <nav className="desktop-nav" style={{ display: "flex", gap: 28, alignItems: "center" }}>
+          {navItems.map(([k, v]) => (
+            <button key={k} onClick={() => nav(k)} style={{
+              background: "none", border: "none", cursor: "pointer", padding: "6px 0",
+              fontFamily: "'Noto Sans JP', sans-serif", fontSize: 12.5,
+              color: page === k ? C.blue : C.textMuted, fontWeight: page === k ? 600 : 400,
+              letterSpacing: "0.04em",
+              borderBottom: page === k ? `2px solid ${C.orange}` : "2px solid transparent",
+              transition: "all 0.3s", paddingBottom: 4,
+            }}>{v}</button>
+          ))}
+        </nav>
+
+        <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}
+          style={{ display: "none", background: "none", border: "none", color: C.blue, fontSize: 24, cursor: "pointer" }}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
+      </div>
+
+      {menuOpen && (
+        <div className="mobile-dropdown" style={{ background: "rgba(255,255,255,0.98)", borderBottom: `1px solid ${C.border}`, padding: "8px 20px 16px", display: "flex", flexDirection: "column", gap: 2 }}>
+          {navItems.map(([k, v]) => (
+            <button key={k} onClick={() => nav(k)} style={{
+              background: page === k ? C.bluePale : "none", border: "none",
+              color: page === k ? C.blue : C.textMuted,
+              fontFamily: "'Noto Sans JP', sans-serif", fontSize: 14,
+              fontWeight: page === k ? 600 : 400,
+              padding: "14px 16px", textAlign: "left", cursor: "pointer", borderRadius: 8,
+            }}>{v}</button>
+          ))}
+        </div>
+      )}
+    </header>
+  );
+}
+
+// ═══════════════════════════════════════════
+// FOOTER
+// ═══════════════════════════════════════════
+function Footer({ setPage }) {
+  const nav = (k) => { setPage(k); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  return (
+    <footer style={{ background: C.blueDeep }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "56px 36px 32px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 48, marginBottom: 48 }}>
+          <div style={{ flex: "1 1 260px" }}>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, color: C.white, letterSpacing: "0.08em", fontWeight: 600, marginBottom: 10 }}>M&I CONSULTING FIRM</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif" }}>
+              株式会社M&Iコンサルティングファーム<br />〒102-0085 東京都千代田区六番町6-4<br />LH番町スクエア5階
+            </div>
+          </div>
+          <div style={{ flex: "1 1 150px" }}>
+            <div style={{ fontSize: 10, color: C.orange, letterSpacing: "0.2em", marginBottom: 14, fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>PAGES</div>
+            {[["home","ホーム"],["reason","保険資格返上の理由"],["company","会社概要"],["contact","お問い合わせ"]].map(([k,v]) => (
+              <div key={k} onClick={() => nav(k)} style={{ color: "rgba(255,255,255,0.4)", fontSize: 12.5, cursor: "pointer", padding: "6px 0", fontFamily: "'Noto Sans JP', sans-serif", transition: "color 0.3s" }}
+                onMouseEnter={e => e.target.style.color = C.orangeLight}
+                onMouseLeave={e => e.target.style.color = "rgba(255,255,255,0.4)"}
+              >{v}</div>
+            ))}
+          </div>
+          <div style={{ flex: "1 1 150px" }}>
+            <div style={{ fontSize: 10, color: C.orange, letterSpacing: "0.2em", marginBottom: 14, fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>CONTACT</div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12.5, lineHeight: 2.2, fontFamily: "'Noto Sans JP', sans-serif" }}>
+              TEL 03-3101-0715<br />携帯 070-6604-1215<br />info@mylocalbiz.jp
+            </div>
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.2)", fontFamily: "'Noto Sans JP', sans-serif" }}>
+          © 2024 M&I Consulting Firm. All Rights Reserved.
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ═══════════════════════════════════════════
+// HOME PAGE
+// ═══════════════════════════════════════════
+function HomePage({ setPage }) {
+  const nav = (k) => { setPage(k); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  const problems = [
+    { icon: "📉", title: "売上が伸び悩んでいる", desc: "市場環境の変化、競合激化の中で新たな成長戦略が見つからない。" },
+    { icon: "💰", title: "経費・コストを下げたい", desc: "物価高騰・人件費上昇の中、利益率を維持するための施策が必要。" },
+    { icon: "👥", title: "人材の確保・育成が難しい", desc: "採用難・離職率の上昇、ハラスメント対策など人事課題が山積。" },
+    { icon: "📋", title: "決算対策・節税に不安", desc: "保険節税が封じられた今、合法的で最適な決算対策を知りたい。" },
+  ];
+
+  const businesses = [
+    { num: "01", tag: "PROFIT STRATEGY", title: "生命保険解約 雑収入対策・利益対策", subtitle: "経営のパワーアップ", desc: "解約返戻金による雑収入の発生は、多くの経営者にとって頭の痛い問題です。保険を売らない中立な立場だからこそ、解約のタイミング・資金の振り向け先・税務上の最適化を、販売目的ではなく純粋に経営視点でアドバイスします。戻ってきた資金を「納税」で終わらせず、次の成長投資へ。", color: C.blue },
+    { num: "02", tag: "INSURANCE DIAGNOSIS", title: "生命保険診断（保険取り消し診断）", subtitle: "弁護士提携", desc: "今加入している保険は、本当にあなたの会社に必要ですか？ 保険募集人の説明不足や不適切な販売により、本来不要な保険に加入させられているケースは少なくありません。提携弁護士と連携し、契約内容の精査・取り消しの可否を診断。経営者の利益を守ります。", color: C.orange },
+    { num: "03", tag: "FREE MATCHING", title: "無料マッチング事業", subtitle: "人と人をつなぐ", desc: "AI時代でも、検索では見つけられない人材・商材がある。20年間で培った経営者ネットワークを活かし、売上向上・経費削減・人材確保など、経営課題を人と人のつながりで解決する無料のマッチングサービスです。", color: C.blueLight },
+  ];
+
+  // Blog/Note sample entries
+  const blogPosts = [
+    { date: "2024.12.15", tag: "経営コラム", title: "バレンタインショックから5年——法人保険の「その後」を考える", excerpt: "2019年の通達から5年。解約返戻金の出口に悩む経営者が増えています。保険を売らない立場だからこそ見える、今取るべき選択肢とは。" },
+    { date: "2024.12.08", tag: "日々の気づき", title: "運と縁とタイミング——先週出会った経営者の話", excerpt: "たった一つの紹介が、会社の未来を変えることがある。人と人をつなぐ仕事をしていて改めて感じた「縁」の力について。" },
+    { date: "2024.11.28", tag: "次世代自販機", title: "自販機が広告塔になる時代——サイネージの可能性", excerpt: "従来の自販機ビジネスの常識を覆す、サイネージ付き次世代自販機。新しいロケーション戦略と広告モデルの最前線をお伝えします。" },
+  ];
+
+  return (
+    <>
+      {/* ═══ 1. HERO ═══ */}
+      <section style={{
+        minHeight: "100vh", display: "flex", alignItems: "center",
+        position: "relative", overflow: "hidden",
+        background: C.blueDeep,
+      }}>
+        {/* Animated gradient mesh background */}
+        <div className="hero-bg" style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 80% 50% at 20% 80%, rgba(27,69,114,0.8) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 40% at 75% 15%, rgba(212,118,44,0.18) 0%, transparent 50%),
+            radial-gradient(ellipse 70% 60% at 50% 50%, rgba(42,90,140,0.5) 0%, transparent 60%),
+            linear-gradient(160deg, #06111F 0%, #0B2035 30%, #122E4E 60%, #0A1E38 100%)
+          `,
+        }} />
+
+        {/* Animated floating orbs */}
+        <div className="hero-orb-1" style={{
+          position: "absolute", top: "20%", right: "10%",
+          width: 300, height: 300, borderRadius: "50%",
+          background: `radial-gradient(circle, rgba(212,118,44,0.1) 0%, transparent 70%)`,
+          filter: "blur(60px)",
+        }} />
+        <div className="hero-orb-2" style={{
+          position: "absolute", bottom: "10%", left: "5%",
+          width: 250, height: 250, borderRadius: "50%",
+          background: `radial-gradient(circle, rgba(42,90,140,0.15) 0%, transparent 70%)`,
+          filter: "blur(50px)",
+        }} />
+        <div className="hero-orb-3" style={{
+          position: "absolute", top: "50%", left: "40%",
+          width: 180, height: 180, borderRadius: "50%",
+          background: `radial-gradient(circle, rgba(232,146,62,0.06) 0%, transparent 70%)`,
+          filter: "blur(40px)",
+        }} />
+
+        {/* Grid pattern overlay — tech feel */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.03,
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+        }} />
+
+        {/* Diagonal accent line */}
+        <div style={{
+          position: "absolute", top: 0, right: "20%", width: 1, height: "100%",
+          background: `linear-gradient(180deg, transparent 10%, rgba(212,118,44,0.08) 50%, transparent 90%)`,
+          transform: "rotate(15deg)", transformOrigin: "top center",
+        }} />
+        <div style={{
+          position: "absolute", top: 0, right: "35%", width: 1, height: "100%",
+          background: `linear-gradient(180deg, transparent 20%, rgba(255,255,255,0.03) 50%, transparent 80%)`,
+          transform: "rotate(-10deg)", transformOrigin: "top center",
+        }} />
+
+        <div style={{ maxWidth: 880, margin: "0 auto", padding: "150px 36px 100px", position: "relative" }}>
+          <Reveal>
+            <div style={{
+              fontSize: 11, color: C.orangeLight, letterSpacing: "0.35em",
+              fontFamily: "'Outfit', sans-serif", fontWeight: 600, marginBottom: 32,
+              textTransform: "uppercase",
+            }}>M&I Consulting Firm — Reborn</div>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <h1 style={{
+              fontFamily: "'Shippori Mincho', serif",
+              fontSize: "clamp(30px, 5vw, 56px)", color: C.white,
+              fontWeight: 500, lineHeight: 1.5, marginBottom: 40,
+            }}>
+              <span style={{ color: C.orangeLight }}>AIは、経営を変える。</span><br />
+              人の縁は、AIにはつくれない。
+            </h1>
+          </Reveal>
+
+          <Reveal delay={0.35}>
+            <p style={{
+              fontSize: 15, color: "rgba(255,255,255,0.55)", lineHeight: 2.2,
+              fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300,
+              maxWidth: 480, marginBottom: 56,
+            }}>
+              テクノロジーを味方に、<br />
+              人と人の<strong style={{ color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>運と縁とタイミング</strong>をつなぐ。
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.5}>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <button onClick={() => nav("contact")} style={{
+                background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 100%)`,
+                color: C.white, border: "none", padding: "16px 44px", borderRadius: 5,
+                fontSize: 13.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500,
+                letterSpacing: "0.1em", cursor: "pointer",
+                boxShadow: "0 4px 24px rgba(212,118,44,0.35)", transition: "all 0.3s",
+              }}
+              onMouseEnter={e => { e.target.style.transform = "translateY(-2px)"; e.target.style.boxShadow = "0 8px 32px rgba(212,118,44,0.45)"; }}
+              onMouseLeave={e => { e.target.style.transform = "translateY(0)"; e.target.style.boxShadow = "0 4px 24px rgba(212,118,44,0.35)"; }}
+              >無料相談を予約する</button>
+              <button onClick={() => nav("reason")} style={{
+                background: "transparent", color: "rgba(255,255,255,0.7)",
+                border: "1.5px solid rgba(255,255,255,0.2)", padding: "16px 36px", borderRadius: 5,
+                fontSize: 13.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 400,
+                letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.3s",
+              }}
+              onMouseEnter={e => { e.target.style.borderColor = C.orangeLight; e.target.style.color = C.orangeLight; }}
+              onMouseLeave={e => { e.target.style.borderColor = "rgba(255,255,255,0.2)"; e.target.style.color = "rgba(255,255,255,0.7)"; }}
+              >私たちの想い →</button>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ 2. 保険資格返還 — IMPACT (ヒーロー直下) ═══ */}
+      <section style={{
+        background: `linear-gradient(160deg, ${C.blueDeep} 0%, ${C.blue} 100%)`,
+        padding: "100px 36px", position: "relative", overflow: "hidden",
+      }}>
+        <div style={{ position: "absolute", top: "10%", right: "-5%", width: 400, height: 400, borderRadius: "50%", border: `1px solid rgba(212,118,44,0.08)` }} />
+        <div style={{ position: "absolute", bottom: "-10%", left: "-3%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, rgba(212,118,44,0.05), transparent 70%)` }} />
+
+        <div style={{ maxWidth: 800, margin: "0 auto", position: "relative" }}>
+          <Reveal><SectionTag text="Why I Gave Up My License" /></Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{
+              fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(24px, 3.5vw, 38px)",
+              color: C.white, fontWeight: 400, lineHeight: 1.6, marginBottom: 36,
+            }}>
+              <span style={{ color: C.orangeLight }}>保険募集人資格を、返還した理由。</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+              保険販売が悪いわけではありません。保険業界には大変お世話になりましたし、そのおかげで多くの経営者と出会うことができました。この業界に心から感謝しています。
+            </p>
+          </Reveal>
+          <Reveal delay={0.3}>
+            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+              しかし現実として、法人が本当に必要な保険はわずか2〜3種類。それにもかかわらず、保険税務や商品知識が乏しいまま、お客様のニーズを聞き切れず——昨今話題となった「手数料」のために販売を続ける募集人があまりにも多い。
+            </p>
+          </Reveal>
+          <Reveal delay={0.38}>
+            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 24 }}>
+              そして今、AIの進化により、返戻率・保険料・保険種類——こうした要素をプロンプトに入力するだけで、最適な保険をAIが選んでくれる時代が来るでしょう。2019年のバレンタインショック、2021年のホワイトデーショックで法人保険の節税メリットも大きく縮小した今——保険を売る側にいる意味は、もうなくなったのです。
+            </p>
+          </Reveal>
+          <Reveal delay={0.38}>
+            <div style={{
+              borderLeft: `3px solid ${C.orangeLight}`, paddingLeft: 24,
+              marginBottom: 40,
+            }}>
+              <p style={{
+                fontSize: 16, color: C.white, lineHeight: 2,
+                fontFamily: "'Shippori Mincho', serif", fontWeight: 500,
+              }}>
+                だから、私は保険募集人の看板を自ら下ろしました。<br />
+                売る側を辞めたからこそ、見える真実がある。<br />
+                その矛盾を、これから発信していきます。
+              </p>
+            </div>
+          </Reveal>
+          <Reveal delay={0.45}>
+            <button onClick={() => nav("reason")} style={{
+              background: `linear-gradient(135deg, ${C.orange} 0%, ${C.orangeLight} 100%)`,
+              color: C.white, border: "none", padding: "14px 36px", borderRadius: 5,
+              fontSize: 13, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500,
+              letterSpacing: "0.08em", cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(212,118,44,0.3)", transition: "all 0.3s",
+            }}
+            onMouseEnter={e => e.target.style.transform = "translateY(-2px)"}
+            onMouseLeave={e => e.target.style.transform = "translateY(0)"}
+            >詳しく読む →</button>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ 3. 経営者の悩み ═══ */}
+      <section style={{ background: C.white, padding: "100px 36px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          <Reveal>
+            <SectionTag text="Problems" />
+            <h2 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(22px, 3vw, 32px)", color: C.blueDeep, fontWeight: 500, marginBottom: 16, lineHeight: 1.5 }}>経営者が今、直面している課題</h2>
+            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 52, maxWidth: 560 }}>
+              物価高騰、人件費上昇、節税スキームの封鎖——経営を取り巻く環境は劇的に変化しています。
+            </p>
+          </Reveal>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+            {problems.map((p, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{
+                  background: C.ivory, border: `1px solid ${C.border}`, borderRadius: 10, padding: "32px 26px",
+                  borderTop: `3px solid ${i % 2 === 0 ? C.blue : C.orange}`,
+                  transition: "transform 0.3s, box-shadow 0.3s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.06)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 14 }}>{p.icon}</div>
+                  <h3 style={{ fontFamily: "'Noto Sans JP', sans-serif", fontSize: 15, color: C.blueDeep, fontWeight: 600, marginBottom: 10 }}>{p.title}</h3>
+                  <p style={{ fontSize: 12.5, color: C.textMuted, lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300 }}>{p.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.4}>
+            <div style={{
+              marginTop: 48, textAlign: "center", padding: "36px 28px",
+              background: `linear-gradient(135deg, ${C.orangePale} 0%, ${C.cream} 100%)`,
+              borderRadius: 10, border: `1px solid rgba(212,118,44,0.12)`,
+            }}>
+              <p style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 18, color: C.blueDeep, fontWeight: 500, lineHeight: 1.8 }}>
+                これらの課題を、<span style={{ color: C.orange }}>運と縁とタイミング</span>で解決する。<br />
+                それが、M&Iコンサルティングファームです。
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ 4. 3つの事業 ═══ */}
+      <section style={{ background: C.ivory, padding: "100px 36px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          <Reveal>
+            <SectionTag text="Our Services" />
+            <h2 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(22px, 3vw, 32px)", color: C.blueDeep, fontWeight: 500, marginBottom: 12 }}>
+              資格を返上したからこそ、できること。
+            </h2>
+            <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 52, maxWidth: 560 }}>
+              保険を売らない立場だからこそ提供できる、3つのサービス。
+            </p>
+          </Reveal>
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            {businesses.map((b, i) => (
+              <Reveal key={i} delay={i * 0.12}>
+                <div style={{
+                  display: "flex", gap: 0, borderRadius: 12, overflow: "hidden",
+                  border: `1px solid ${C.border}`, background: C.white,
+                  transition: "box-shadow 0.4s", flexWrap: "wrap",
+                }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 8px 40px rgba(0,0,0,0.06)"}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+                >
+                  <div style={{
+                    width: 100, minHeight: 220,
+                    background: `linear-gradient(180deg, ${b.color} 0%, ${b.color}DD 100%)`,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 36, color: "rgba(255,255,255,0.25)", fontWeight: 700 }}>{b.num}</div>
+                  </div>
+                  <div style={{ flex: 1, padding: "36px 36px", minWidth: 240 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, color: b.color, letterSpacing: "0.25em", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>{b.tag}</span>
+                      <span style={{
+                        fontSize: 10.5, color: C.white, background: b.color,
+                        padding: "3px 10px", borderRadius: 3,
+                        fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500,
+                      }}>{b.subtitle}</span>
+                    </div>
+                    <h3 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 21, color: C.blueDeep, fontWeight: 500, marginBottom: 16, lineHeight: 1.5 }}>{b.title}</h3>
+                    <p style={{ fontSize: 13.5, color: C.textSoft, lineHeight: 2.3, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300 }}>{b.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 5. 代表メッセージ ═══ */}
+      <section style={{ background: C.white, padding: "100px 36px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <Reveal><SectionTag text="Message from CEO" /></Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(22px, 3vw, 30px)", color: C.blueDeep, fontWeight: 500, lineHeight: 1.6, marginBottom: 40 }}>代表メッセージ</h2>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <div style={{ display: "flex", gap: 40, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div style={{ flex: "0 0 auto", textAlign: "center" }}>
+                <div style={{
+                  width: 140, height: 140, borderRadius: "50%",
+                  overflow: "hidden",
+                  border: `3px solid ${C.blue}20`,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                  marginBottom: 14,
+                }}>
+                  <img src="ceo-photo.jpg" alt="三浦 大介" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+                </div>
+                <div style={{ fontFamily: "'Noto Sans JP', sans-serif", fontSize: 14, color: C.blueDeep, fontWeight: 600 }}>三浦 大介</div>
+                <div style={{ fontSize: 11, color: C.textMuted, fontFamily: "'Noto Sans JP', sans-serif", marginTop: 2 }}>代表取締役</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <div style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 44, color: `${C.orange}18`, lineHeight: 1, marginBottom: 8 }}>"</div>
+                <p style={{ fontSize: 14.5, color: C.textSoft, lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 20 }}>
+                  32歳でプルデンシャル生命に入社し、40歳から保険代理店を経営。20年にわたり、保険販売を軸に中小企業の経営者と向き合ってきました。
+                </p>
+                <p style={{ fontSize: 14.5, color: C.textSoft, lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 20 }}>
+                  その中で気づいたのは、経営者の悩みは保険だけでは解決できないということ。売上を上げたい、コストを下げたい、良い人材が欲しい——そうした切実な声に応える中で、人と人をつなぎ、課題をマッチングで解決するという自分なりのスタイルが生まれました。
+                </p>
+                <p style={{ fontSize: 14.5, color: C.textSoft, lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 20 }}>
+                  AI時代が来るとは思いながらも、何も手を出せなかった自分がいました。しかし、このホームページをAIを使って自分で作ってみたことで気づいたのです——難しく考えていただけだった、と。まず少しでもいじってみること。それだけで世界は変わります。
+                </p>
+                <p style={{ fontSize: 14.5, color: C.textSoft, lineHeight: 2.5, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+                  一方で、AIにはできないこともある。それは、人と人との縁をつなぐこと。運と縁とタイミング——この3つが揃ったとき、会社の経営も、人生も変わる。20年間で何度もそれを体感してきました。
+                </p>
+                <div style={{
+                  borderLeft: `3px solid ${C.orange}`, paddingLeft: 24,
+                  marginBottom: 8,
+                }}>
+                  <p style={{ fontSize: 16, color: C.blueDeep, lineHeight: 2, fontFamily: "'Shippori Mincho', serif", fontWeight: 500 }}>
+                    テクノロジーを恐れず、人のつながりを信じる。<br />
+                    その信念のもと、M&Iコンサルティングファームを<br />
+                    リボーンさせる決断をしました。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ 6. ブログ / ノート ═══ */}
+      <section style={{ background: C.ivory, padding: "100px 36px", borderTop: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          <Reveal>
+            <SectionTag text="Note / Blog" />
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 48 }}>
+              <h2 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(22px, 3vw, 30px)", color: C.blueDeep, fontWeight: 500 }}>代表の視点</h2>
+              <span style={{ fontSize: 12, color: C.orange, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500, cursor: "pointer", letterSpacing: "0.06em" }}>すべての記事を見る →</span>
+            </div>
+          </Reveal>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+            {blogPosts.map((post, i) => (
+              <Reveal key={i} delay={i * 0.12}>
+                <article style={{
+                  background: C.white, border: `1px solid ${C.border}`,
+                  borderRadius: 10, overflow: "hidden",
+                  transition: "transform 0.3s, box-shadow 0.3s", cursor: "pointer",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.06)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  {/* Color accent bar */}
+                  <div style={{ height: 4, background: `linear-gradient(90deg, ${C.blue}, ${C.orange})` }} />
+                  <div style={{ padding: "28px 26px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                      <span style={{
+                        fontSize: 10, color: C.white, background: C.blue,
+                        padding: "3px 10px", borderRadius: 3,
+                        fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500,
+                        letterSpacing: "0.04em",
+                      }}>{post.tag}</span>
+                      <span style={{ fontSize: 11, color: C.textMuted, fontFamily: "'Outfit', sans-serif", fontWeight: 400 }}>{post.date}</span>
+                    </div>
+                    <h3 style={{
+                      fontFamily: "'Noto Sans JP', sans-serif", fontSize: 15,
+                      color: C.blueDeep, fontWeight: 600, lineHeight: 1.7, marginBottom: 12,
+                    }}>{post.title}</h3>
+                    <p style={{
+                      fontSize: 12.5, color: C.textMuted, lineHeight: 2,
+                      fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300,
+                    }}>{post.excerpt}</p>
+                    <div style={{ marginTop: 16, fontSize: 12, color: C.orange, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500 }}>続きを読む →</div>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ CTA ═══ */}
+      <section style={{
+        background: `linear-gradient(135deg, ${C.orangePale} 0%, ${C.cream} 100%)`,
+        padding: "64px 36px", borderTop: `1px solid rgba(212,118,44,0.1)`,
+      }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+          <Reveal>
+            <p style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 20, color: C.blueDeep, fontWeight: 500, lineHeight: 1.7, marginBottom: 28 }}>
+              経営のお悩み、まずはお気軽にご相談ください。
+            </p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <button onClick={() => nav("contact")} style={{
+              background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueLight} 100%)`,
+              color: C.white, border: "none", padding: "16px 48px", borderRadius: 5,
+              fontSize: 14, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500,
+              letterSpacing: "0.1em", cursor: "pointer",
+              boxShadow: `0 4px 20px rgba(27,69,114,0.2)`, transition: "all 0.3s",
+            }}
+            onMouseEnter={e => e.target.style.transform = "translateY(-2px)"}
+            onMouseLeave={e => e.target.style.transform = "translateY(0)"}
+            >お問い合わせはこちら</button>
+          </Reveal>
+        </div>
+      </section>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════
+// REASON PAGE
+// ═══════════════════════════════════════════
+function ReasonPage() {
+  return (
+    <section style={{ background: `linear-gradient(170deg, ${C.ivory} 0%, ${C.cream} 100%)`, minHeight: "100vh", padding: "140px 36px 100px" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <Reveal><SectionTag text="Our Philosophy" /></Reveal>
+        <Reveal delay={0.1}><h1 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(26px, 3.8vw, 40px)", color: C.blueDeep, fontWeight: 500, lineHeight: 1.55, marginBottom: 44 }}>看板を捨ててまで、<br />守りたかったもの。</h1></Reveal>
+        <Reveal delay={0.2}><AccentLine width={48} style={{ marginBottom: 44 }} /></Reveal>
+        <Reveal delay={0.3}>
+          <p style={{ fontSize: 15, color: C.textSoft, lineHeight: 2.6, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+            32歳でプルデンシャル生命に入社し、40歳から保険代理店を経営。約20年間、保険販売を中心に税務コンサルティングを行ってきました。その間、多くの経営者と出会い、多くの課題をヒアリングし、人と人のマッチングで解決してきました。
+          </p>
+        </Reveal>
+        <Reveal delay={0.35}>
+          <p style={{ fontSize: 15, color: C.textSoft, lineHeight: 2.6, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+            しかし、保険募集人の資格を持ったままでは、本当に公平なアドバイスができない。つい保険販売を意識してしまう。そう感じた瞬間が、何度もありました。
+          </p>
+        </Reveal>
+        <Reveal delay={0.4}>
+          <div style={{ background: C.blueDeep, borderRadius: 10, padding: "40px 36px", margin: "40px 0" }}>
+            <h3 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 18, color: C.orangeLight, fontWeight: 500, marginBottom: 20 }}>業界を変えた2つのショック</h3>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              {[
+                { year: "2019年", name: "バレンタインショック", desc: "法人向け節税保険に対する国税庁通達により、保険を活用した節税スキームが大幅に制限。" },
+                { year: "2021年", name: "ホワイトデーショック", desc: "さらなる規制強化。法人保険のコンサルティングニーズが激減し、業界の構造転換が加速。" },
+              ].map((s, i) => (
+                <div key={i} style={{ flex: "1 1 240px", padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: 11, color: C.orangeLight, fontFamily: "'Outfit', sans-serif", fontWeight: 600, letterSpacing: "0.1em", marginBottom: 6 }}>{s.year}</div>
+                  <div style={{ fontSize: 14, color: C.white, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 500, marginBottom: 8 }}>{s.name}</div>
+                  <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)", lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300 }}>{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+        <Reveal delay={0.45}>
+          <p style={{ fontSize: 15, color: C.textSoft, lineHeight: 2.6, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 28 }}>
+            節税の代名詞だった生命保険の活用は限定的になり、ドローンや足場のスキームも封じられ、いたちごっこが続いています。そんな時代だからこそ、保険を売る立場を離れ、経営者にとって本当に価値ある存在になりたいと決意しました。
+          </p>
+        </Reveal>
+        <Reveal delay={0.5}>
+          <p style={{
+            fontSize: 16, color: C.blueDeep, lineHeight: 2.2,
+            fontFamily: "'Shippori Mincho', serif", fontWeight: 500,
+            borderLeft: `3px solid ${C.orange}`, paddingLeft: 24,
+          }}>
+            戻ってきた資金を単なる納税で終わらせず、次なる成長への投資へと変えていく。守るだけの守備から、未来を創る攻めの経営へ。保険という枠を超えた軍師として、あなたの決断にどこまでも寄り添い、共に歩んでいきます。
+          </p>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════
+// COMPANY PAGE
+// ═══════════════════════════════════════════
+function CompanyPage() {
+  const info = [
+    { label: "会社名", value: "株式会社M&Iコンサルティングファーム" },
+    { label: "代表者", value: "代表取締役 三浦 大介" },
+    { label: "事業内容", value: "生命保険解約 雑収入・利益対策 / 生命保険診断（弁護士提携）/ 無料マッチング事業" },
+    { label: "所在地", value: "〒102-0085 東京都千代田区六番町6-4 LH番町スクエア5階" },
+    { label: "連絡先", value: "TEL 03-3101-0715 ／ 携帯 070-6604-1215" },
+  ];
+  return (
+    <section style={{ background: `linear-gradient(170deg, ${C.ivory} 0%, ${C.cream} 100%)`, minHeight: "100vh", padding: "140px 36px 100px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <Reveal><SectionTag text="About Us" /></Reveal>
+        <Reveal delay={0.1}><h1 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(26px, 3.8vw, 40px)", color: C.blueDeep, fontWeight: 500, lineHeight: 1.55, marginBottom: 24 }}>会社概要</h1></Reveal>
+        <Reveal delay={0.2}><p style={{ fontSize: 14, color: C.textSoft, lineHeight: 2.2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 56, maxWidth: 600 }}>運と縁とタイミングを信じ、経営者の真の伴走者として、中立かつ独立した立場からサポートを行います。</p></Reveal>
+        <Reveal delay={0.25}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+            {info.map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 24, padding: "22px 32px", borderBottom: i < info.length - 1 ? `1px solid ${C.border}` : "none", flexWrap: "wrap", alignItems: "baseline" }}>
+                <div style={{ fontSize: 12, color: C.orange, fontWeight: 600, fontFamily: "'Noto Sans JP', sans-serif", minWidth: 80, letterSpacing: "0.06em" }}>{item.label}</div>
+                <div style={{ fontSize: 14, color: C.text, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, lineHeight: 1.8, flex: 1, minWidth: 200 }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════
+// CONTACT PAGE
+// ═══════════════════════════════════════════
+function ContactPage() {
+  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", date: "", subject: "経営相談", note: "" });
+  const [submitted, setSubmitted] = useState(false);
+  const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }));
+  const inputStyle = {
+    width: "100%", background: C.white, border: `1px solid ${C.border}`, borderRadius: 6,
+    padding: "14px 16px", color: C.text, fontSize: 14, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300,
+    outline: "none", transition: "border-color 0.3s, box-shadow 0.3s", boxSizing: "border-box",
+  };
+  const labelStyle = { fontSize: 12, color: C.blue, marginBottom: 8, display: "block", fontFamily: "'Noto Sans JP', sans-serif", letterSpacing: "0.04em", fontWeight: 600 };
+  const focus = (e) => { e.target.style.borderColor = C.blue; e.target.style.boxShadow = `0 0 0 3px ${C.blue}10`; };
+  const blur = (e) => { e.target.style.borderColor = C.border; e.target.style.boxShadow = "none"; };
+
+  if (submitted) {
+    return (
+      <section style={{ background: `linear-gradient(170deg, ${C.ivory} 0%, ${C.cream} 100%)`, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "140px 36px" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${C.blue}, ${C.blueLight})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 24, color: C.white }}>✓</div>
+          <h2 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: 26, color: C.blueDeep, fontWeight: 500, marginBottom: 16 }}>送信完了</h2>
+          <p style={{ fontSize: 14, color: C.textSoft, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300 }}>お問い合わせありがとうございます。担当者よりご連絡いたします。</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section style={{ background: `linear-gradient(170deg, ${C.ivory} 0%, ${C.cream} 100%)`, minHeight: "100vh", padding: "140px 36px 100px" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <Reveal><SectionTag text="Contact" /></Reveal>
+        <Reveal delay={0.1}><h1 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(22px, 3vw, 32px)", color: C.blueDeep, fontWeight: 500, marginBottom: 14 }}>お問い合わせ</h1></Reveal>
+        <Reveal delay={0.15}><p style={{ fontSize: 13, color: C.textMuted, lineHeight: 2, fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300, marginBottom: 40 }}>経営のお悩み、まずはお気軽にご相談ください。初回相談は無料です。</p></Reveal>
+        <Reveal delay={0.2}>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "40px 36px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 200px" }}><label style={labelStyle}>お名前 *</label><input style={inputStyle} value={form.name} onChange={set("name")} onFocus={focus} onBlur={blur} /></div>
+                <div style={{ flex: "1 1 200px" }}><label style={labelStyle}>貴社名</label><input style={inputStyle} value={form.company} onChange={set("company")} onFocus={focus} onBlur={blur} /></div>
+              </div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 200px" }}><label style={labelStyle}>メールアドレス *</label><input type="email" style={inputStyle} value={form.email} onChange={set("email")} onFocus={focus} onBlur={blur} /></div>
+                <div style={{ flex: "1 1 200px" }}><label style={labelStyle}>電話番号</label><input type="tel" style={inputStyle} value={form.phone} onChange={set("phone")} onFocus={focus} onBlur={blur} /></div>
+              </div>
+              <div><label style={labelStyle}>ご希望の連絡日 *</label><input type="date" style={inputStyle} value={form.date} onChange={set("date")} onFocus={focus} onBlur={blur} /></div>
+              <div>
+                <label style={labelStyle}>ご相談内容 *</label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {["経営相談", "次世代自販機", "人材マッチング", "その他"].map(opt => (
+                    <button key={opt} onClick={() => setForm(p => ({...p, subject: opt}))} style={{
+                      padding: "10px 20px", borderRadius: 6,
+                      border: form.subject === opt ? `2px solid ${C.blue}` : `1px solid ${C.border}`,
+                      background: form.subject === opt ? C.bluePale : C.white,
+                      color: form.subject === opt ? C.blue : C.textMuted,
+                      fontSize: 12.5, cursor: "pointer", fontFamily: "'Noto Sans JP', sans-serif",
+                      fontWeight: form.subject === opt ? 600 : 300, transition: "all 0.3s",
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+              <div><label style={labelStyle}>備考</label><textarea rows={4} style={{...inputStyle, resize: "vertical"}} value={form.note} onChange={set("note")} onFocus={focus} onBlur={blur} /></div>
+              <button onClick={() => setSubmitted(true)} style={{
+                background: `linear-gradient(135deg, ${C.blue} 0%, ${C.blueLight} 100%)`,
+                color: C.white, border: "none", borderRadius: 6,
+                padding: "16px 32px", fontSize: 13.5, fontWeight: 500, cursor: "pointer",
+                letterSpacing: "0.1em", fontFamily: "'Noto Sans JP', sans-serif",
+                transition: "all 0.3s", marginTop: 4, boxShadow: `0 4px 16px rgba(27,69,114,0.2)`,
+              }}
+              onMouseEnter={e => e.target.style.transform = "translateY(-1px)"}
+              onMouseLeave={e => e.target.style.transform = "translateY(0)"}
+              >送信する</button>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════
+export default function App() {
+  const [page, setPage] = useState("home");
+  return (
+    <div style={{ background: C.ivory, color: C.text, minHeight: "100vh", fontFamily: "'Noto Sans JP', sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Shippori+Mincho:wght@400;500;600&family=Noto+Sans+JP:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      <style>{`
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        ::selection { background: rgba(212,118,44,0.15); color: ${C.blueDeep}; }
+        html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+        body { overflow-x: hidden; }
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-menu-btn { display: block !important; }
+        }
+        @media (min-width: 769px) {
+          .mobile-menu-btn { display: none !important; }
+          .mobile-dropdown { display: none !important; }
+        }
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-20px, 15px); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(15px, -20px); }
+        }
+        @keyframes float3 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-10px, -12px); }
+        }
+        .hero-orb-1 { animation: float1 8s ease-in-out infinite; }
+        .hero-orb-2 { animation: float2 10s ease-in-out infinite; }
+        .hero-orb-3 { animation: float3 12s ease-in-out infinite; }
+      `}</style>
+      <Header page={page} setPage={setPage} />
+      {page === "home" && <HomePage setPage={setPage} />}
+      {page === "reason" && <ReasonPage />}
+      {page === "company" && <CompanyPage />}
+      {page === "contact" && <ContactPage />}
+      <Footer setPage={setPage} />
+    </div>
+  );
+}
